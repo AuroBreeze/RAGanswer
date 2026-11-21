@@ -144,16 +144,54 @@
 	let backgroundIndex = $state(0);
 	let conversationEl: HTMLDivElement | undefined = $state();
 	let inputTimer: ReturnType<typeof setTimeout> | undefined;
+	let orbPlacement = $state({ left: 24, top: 24, size: 64 });
+	let orbTracking = $state(false);
+	let orbTrackTimer: ReturnType<typeof setTimeout> | undefined;
 
 	const orbClass = $derived(
 		phase === 'chat'
-			? 'left-6 top-6 h-16 w-16 translate-x-0 translate-y-0 scale-100'
+			? ''
 			: `left-1/2 h-64 w-64 -translate-x-1/2 sm:h-80 sm:w-80 ${
 					phase === 'listening'
 						? 'top-[28vh] -translate-y-1/2 scale-110'
 						: 'top-[30vh] -translate-y-1/2 scale-100'
 				}`
 	);
+
+	function updateOrbPlacement(tracked = false) {
+		if (phase !== 'chat' || !conversationEl) return;
+
+		const turns = conversationEl.querySelectorAll<HTMLElement>('.chat-turn');
+		const last = turns[turns.length - 1];
+		if (!last) return;
+
+		const target = last.querySelector<HTMLElement>('.chat-answer') ?? last;
+		const rect = target.getBoundingClientRect();
+		const log = conversationEl.querySelector<HTMLElement>('.chat-log');
+		const edge = log ? log.getBoundingClientRect().left : rect.left;
+		const available = edge - 24;
+
+		if (available < 150) {
+			orbPlacement = { left: 20, top: 20, size: 64 };
+			return;
+		}
+
+		const size = Math.min(168, Math.max(96, available - 32));
+		const left = Math.max(16, edge - size - 24);
+		const top = Math.min(
+			Math.max(16, rect.top + rect.height / 2 - size / 2),
+			Math.max(16, window.innerHeight - size - 132)
+		);
+		orbPlacement = { left, top, size };
+
+		if (tracked) {
+			orbTracking = true;
+			if (orbTrackTimer) clearTimeout(orbTrackTimer);
+			orbTrackTimer = setTimeout(() => {
+				orbTracking = false;
+			}, 160);
+		}
+	}
 
 	function clearInputTimer() {
 		if (inputTimer) {
@@ -217,6 +255,7 @@
 		return () => {
 			clearInterval(timer);
 			clearInputTimer();
+			if (orbTrackTimer) clearTimeout(orbTrackTimer);
 		};
 	});
 
@@ -226,10 +265,33 @@
 		const behavior = typing ? 'smooth' : 'auto';
 		el.scrollTo({ top: el.scrollHeight, behavior });
 	});
+
+	$effect(() => {
+		if (phase !== 'chat' || !conversationEl) return;
+		updateOrbPlacement();
+		const frame = requestAnimationFrame(() => updateOrbPlacement());
+		const onScroll = () => updateOrbPlacement(true);
+		const onResize = () => updateOrbPlacement(true);
+		conversationEl.addEventListener('scroll', onScroll, { passive: true });
+		window.addEventListener('resize', onResize);
+		return () => {
+			cancelAnimationFrame(frame);
+			conversationEl?.removeEventListener('scroll', onScroll);
+			window.removeEventListener('resize', onResize);
+		};
+	});
+
+	$effect(() => {
+		const turns = conversation.length;
+		const refs = references.length;
+		const busy = typing;
+		if (phase !== 'chat' || (turns === 0 && refs === 0 && !busy)) return;
+		requestAnimationFrame(() => updateOrbPlacement());
+	});
 </script>
 
 <svelte:head>
-	<title>RAGanswer</title>
+	<title>Orb Chat</title>
 </svelte:head>
 
 <main class="relative min-h-dvh w-full overflow-x-hidden bg-[#050706] text-zinc-100">
@@ -251,125 +313,116 @@
 	<WaveBackground ontap={handleScreenTap} visible={phase !== 'chat'} />
 
 	<div
-		class={`pointer-events-none fixed z-20 transition-all duration-1000 ease-in-out motion-reduce:transition-none ${orbClass}`}
+		class={`pointer-events-none fixed z-20 transition-all duration-1000 ease-in-out ${orbClass}`}
+		style={phase === 'chat'
+			? `left:${orbPlacement.left}px; top:${orbPlacement.top}px; width:${orbPlacement.size}px; height:${orbPlacement.size}px;${
+					orbTracking ? ' transition:none;' : ''
+				}`
+			: ''}
 	>
 		<JellyOrb />
 	</div>
 
 	{#if phase === 'chat'}
-		<div
-			class="pointer-events-none fixed left-24 top-9 z-20 flex items-baseline gap-2"
-			in:fade={{ duration: 400 }}
-		>
-			<span class="text-sm font-medium text-zinc-200">Orb 1.0</span>
-			<span class="text-[11px] text-zinc-500">RAG 对话</span>
+		<div class="chat-head" in:fade={{ duration: 400 }}>
+			<span class="chat-brand">Orb</span>
+			<span class="chat-head-meta">对话记录 · {conversation.length} 轮</span>
 		</div>
 
-		<div
-			class="relative z-10 flex min-h-dvh flex-col lg:h-dvh lg:flex-row"
-			in:fade={{ duration: 450 }}
-		>
-			<section class="flex min-h-0 flex-1 flex-col">
-				<div
-					bind:this={conversationEl}
-					class="min-h-0 flex-1 overflow-y-auto px-5 pt-24 sm:px-10 lg:pl-24"
-				>
-					<div class="mx-auto w-full max-w-2xl space-y-10 pb-6">
+		<div class="chat-shell" in:fade={{ duration: 450 }}>
+			<section class="chat-main">
+				<div bind:this={conversationEl} class="scrollbar-subtle chat-transcript">
+					<ol class="chat-log">
 						{#each conversation as turn, i (i)}
-							<div class="flex flex-col items-end" in:fade={{ duration: 240 }}>
-								<span class="text-[11px] text-zinc-500">你</span>
-								<p class="mt-2 max-w-xl text-right text-lg leading-relaxed text-zinc-100">
-									{turn.question}
-								</p>
-							</div>
-							{#if turn.answer}
-								<div class="border-l border-emerald-400/30 pl-5" in:fade={{ duration: 300 }}>
-									<div
-										class="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-emerald-400/80"
-									>
-										<span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-										Orb
-									</div>
-									<p class="mt-3 text-base leading-7 text-zinc-300">{turn.answer}</p>
-									{#if turn.citations?.length}
-										<div class="mt-3 flex flex-wrap gap-1.5">
-											{#each turn.citations ?? [] as citation}
-												<span class="text-[11px] text-emerald-400/70">[{citation}]</span>
-											{/each}
+							<li class="chat-turn" in:fade={{ duration: 240 }}>
+								<div class="chat-index">
+									<span class="chat-num">{String(i + 1).padStart(2, '0')}</span>
+									<span class="chat-role">提问</span>
+								</div>
+
+								<div class="chat-body">
+									<p class="chat-ask">{turn.question}</p>
+
+									{#if turn.answer}
+										<div class="chat-reply" in:fade={{ duration: 300 }}>
+											<p class="chat-signature">
+												Orb
+												<span>知识库 · {turn.citations?.length ?? 0} 条</span>
+											</p>
+											<p class="chat-answer">
+												{turn.answer}{#if turn.citations?.length}<span class="chat-cites"
+														>{#each turn.citations ?? [] as citation}<sup>{citation}</sup>{/each}</span
+													>{/if}
+											</p>
 										</div>
 									{/if}
 								</div>
-							{/if}
+							</li>
 						{/each}
+
 						{#if typing}
-							<div class="border-l border-emerald-400/30 pl-5" in:fade={{ duration: 240 }}>
-								<div
-									class="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-emerald-400/80"
-								>
-									<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
-									Orb 正在检索
+							<li class="chat-turn" in:fade={{ duration: 240 }}>
+								<div class="chat-index">
+									<span class="chat-num">··</span>
+									<span class="chat-role">检索</span>
 								</div>
-								<div class="mt-4 flex gap-1.5">
-									<span
-										class="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:-0.3s]"
-									></span>
-									<span
-										class="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:-0.15s]"
-									></span>
-									<span class="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500"></span>
+								<div class="chat-body">
+									<div class="chat-reply">
+										<p class="chat-signature is-waiting">
+											Orb
+											<span>正在检索知识库</span>
+										</p>
+										<div class="chat-loader" aria-hidden="true"><span></span></div>
+									</div>
 								</div>
-							</div>
+							</li>
 						{/if}
-					</div>
+					</ol>
 				</div>
 
-				<div class="shrink-0 px-5 pb-6 pt-3 sm:px-10 lg:pl-24">
+				<div class="chat-arc">
+					<div class="chat-arc-wash" aria-hidden="true"></div>
 					<button
 						type="button"
 						onclick={handleChatInput}
 						disabled={typing}
-						class="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-5 py-2.5 text-sm text-emerald-300 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-40"
+						class="chat-arc-button"
+						aria-label="继续提问"
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
 							viewBox="0 0 24 24"
-							stroke-width="1.7"
+							stroke-width="1.6"
 							stroke="currentColor"
-							class="h-4 w-4"
 							aria-hidden="true"
 						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
-							/>
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0-6 6m6-6 6 6" />
 						</svg>
-						{typing ? '正在检索…' : '轻触说话'}
 					</button>
 				</div>
 			</section>
 
 			<aside
-				class="min-h-0 w-full overflow-y-auto border-t border-white/10 bg-[#07110c]/45 px-5 pb-10 pt-6 shadow-[inset_1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-2xl backdrop-saturate-150 lg:h-full lg:w-80 lg:border-l lg:border-t-0"
+				class="scrollbar-subtle chat-refs"
 				in:fly={{ x: 80, duration: 700, delay: 120 }}
 				aria-label="参考文献"
 			>
-				<div class="flex items-baseline justify-between">
-					<h2 class="text-sm font-medium text-zinc-200">参考文献</h2>
-					<span class="text-[11px] text-zinc-500">
-						{references.length ? references.length + ' 条' : '检索中'}
-					</span>
+				<div class="chat-refs-head">
+					<h2>参考文献</h2>
+					<span>{references.length ? String(references.length).padStart(2, '0') : '—'}</span>
 				</div>
-				<p class="mt-2 text-[11px] leading-5 text-zinc-500">来自知识库的检索片段，按相关度排序。</p>
+				<p class="chat-refs-note">知识库检索片段，按相关度排序。</p>
+
 				{#if references.length}
-					<ol class="mt-6 space-y-6">
+					<ol class="chat-ref-list">
 						{#each references as reference, i}
-							<li class="border-l border-white/10 pl-4">
-								<p class="text-[11px] text-emerald-400/70">[{i + 1}] {reference.source}</p>
-								<p class="mt-1.5 text-sm leading-6 text-zinc-200">{reference.title}</p>
-								<p class="mt-1 text-xs leading-5 text-zinc-500">{reference.snippet}</p>
-								<div class="mt-2 flex justify-between text-[11px] text-zinc-600">
+							<li>
+								<span class="chat-ref-num">{String(i + 1).padStart(2, '0')}</span>
+								<p class="chat-ref-source">{reference.source}</p>
+								<p class="chat-ref-title">{reference.title}</p>
+								<p class="chat-ref-snippet">{reference.snippet}</p>
+								<div class="chat-ref-foot">
 									<span>{reference.locator}</span>
 									<span>{reference.score}</span>
 								</div>
@@ -377,7 +430,7 @@
 						{/each}
 					</ol>
 				{:else}
-					<p class="mt-6 text-xs text-zinc-500">正在检索知识库…</p>
+					<p class="chat-refs-empty">正在检索…</p>
 				{/if}
 			</aside>
 		</div>
@@ -401,7 +454,10 @@
 					<p class="mt-3 text-2xl font-medium leading-snug tracking-tight text-zinc-50 sm:text-3xl">
 						{speech}
 					</p>
-					<p class="mt-6 text-sm text-zinc-400">正在识别…</p>
+					<p class="mt-6 flex items-center justify-center gap-2 text-sm text-zinc-400">
+						<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" aria-hidden="true"></span>
+						正在识别…
+					</p>
 				</div>
 			{:else}
 				<h1 class="text-3xl font-medium tracking-tight text-zinc-50 sm:text-4xl">你可以问…</h1>
@@ -415,21 +471,7 @@
 				</div>
 
 				<p class="mt-6 flex select-none items-center justify-center gap-2 text-sm text-zinc-400">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="1.7"
-						stroke="currentColor"
-						class="h-4 w-4 animate-pulse text-emerald-400"
-						aria-hidden="true"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
-						/>
-					</svg>
+					<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" aria-hidden="true"></span>
 					触摸屏幕来输入语音
 				</p>
 			{/if}
@@ -442,3 +484,412 @@
 		</footer>
 	{/if}
 </main>
+
+<style>
+	.chat-head {
+		position: fixed;
+		left: 6rem;
+		top: 2.1rem;
+		z-index: 20;
+		display: flex;
+		align-items: baseline;
+		gap: 0.85rem;
+		pointer-events: none;
+	}
+
+	.chat-brand {
+		font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, 'Songti SC',
+			'STSong', 'SimSun', serif;
+		font-size: 1.05rem;
+		letter-spacing: 0.02em;
+		color: #ece7db;
+	}
+
+	.chat-head-meta {
+		font-size: 0.6875rem;
+		letter-spacing: 0.16em;
+		color: #6c6a61;
+	}
+
+	.chat-shell {
+		position: relative;
+		z-index: 10;
+		display: flex;
+		min-height: 100dvh;
+		flex-direction: column;
+	}
+
+	.chat-main {
+		display: flex;
+		min-height: 0;
+		flex: 1;
+		flex-direction: column;
+	}
+
+	.chat-transcript {
+		min-height: 0;
+		flex: 1;
+		overflow-y: auto;
+		padding: 7.5rem 1.5rem 0;
+	}
+
+	.chat-log {
+		margin: 0 auto;
+		width: 100%;
+		max-width: 44rem;
+		list-style: none;
+		padding: 0;
+	}
+
+	.chat-turn {
+		display: grid;
+		grid-template-columns: 4.5rem minmax(0, 1fr);
+		gap: 1.75rem;
+		padding: 2.5rem 0;
+		border-top: 1px solid rgba(236, 231, 219, 0.07);
+	}
+
+	.chat-turn:first-child {
+		border-top: 0;
+		padding-top: 0.5rem;
+	}
+
+	.chat-index {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		padding-top: 0.3rem;
+	}
+
+	.chat-num {
+		font-family: 'Iowan Old Style', Georgia, 'Songti SC', 'SimSun', serif;
+		font-size: 0.8125rem;
+		letter-spacing: 0.08em;
+		color: #9caf97;
+		font-variant-numeric: oldstyle-nums;
+	}
+
+	.chat-role {
+		font-size: 0.625rem;
+		letter-spacing: 0.2em;
+		color: #5f5d55;
+	}
+
+	.chat-body {
+		min-width: 0;
+	}
+
+	.chat-ask {
+		margin: 0;
+		font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'Songti SC', 'STSong', 'SimSun',
+			serif;
+		font-size: 1.0625rem;
+		line-height: 1.9;
+		color: #efeae0;
+	}
+
+	.chat-reply {
+		margin-top: 1.9rem;
+	}
+
+	.chat-signature {
+		display: flex;
+		align-items: center;
+		gap: 0.7rem;
+		margin: 0 0 0.9rem;
+		font-size: 0.6875rem;
+		letter-spacing: 0.14em;
+		color: #9caf97;
+	}
+
+	.chat-signature::before {
+		content: '';
+		width: 1.1rem;
+		height: 1px;
+		background: currentColor;
+		opacity: 0.55;
+	}
+
+	.chat-signature span {
+		color: #6c6a61;
+		letter-spacing: 0.06em;
+	}
+
+	.chat-signature.is-waiting span {
+		color: #8a877c;
+	}
+
+	.chat-answer {
+		margin: 0;
+		font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'Songti SC', 'STSong', 'SimSun',
+			serif;
+		font-size: 1rem;
+		line-height: 1.95;
+		color: #c9c4b8;
+		text-wrap: pretty;
+	}
+
+	.chat-cites {
+		white-space: nowrap;
+	}
+
+	.chat-cites sup {
+		margin-left: 0.18em;
+		font-family: 'Iowan Old Style', Georgia, serif;
+		font-size: 0.62em;
+		line-height: 0;
+		vertical-align: super;
+		color: #9caf97;
+	}
+
+	.chat-loader {
+		position: relative;
+		width: 10rem;
+		height: 1px;
+		margin-top: 0.4rem;
+		background: rgba(236, 231, 219, 0.1);
+		overflow: hidden;
+	}
+
+	.chat-loader span {
+		position: absolute;
+		inset: 0 auto 0 0;
+		width: 40%;
+		background: #9caf97;
+		animation: chat-scan 1.4s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+	}
+
+	@keyframes chat-scan {
+		0% {
+			transform: translateX(-100%);
+		}
+		100% {
+			transform: translateX(350%);
+		}
+	}
+
+	.chat-arc {
+		position: relative;
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+		flex: none;
+		height: 7.5rem;
+		padding-bottom: 1.35rem;
+	}
+
+	.chat-arc-wash {
+		position: absolute;
+		bottom: 0;
+		left: 50%;
+		width: min(38rem, 94%);
+		height: 7rem;
+		transform: translateX(-50%);
+		border-top: 1px solid rgba(236, 231, 219, 0.14);
+		border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+		background: radial-gradient(
+			ellipse at 50% 100%,
+			rgba(156, 175, 151, 0.07),
+			rgba(5, 7, 6, 0) 68%
+		);
+		pointer-events: none;
+	}
+
+	.chat-arc-button {
+		position: relative;
+		z-index: 1;
+		display: grid;
+		place-items: center;
+		width: 4.5rem;
+		height: 4.5rem;
+		margin-bottom: 0.2rem;
+		border: 1px solid rgba(236, 231, 219, 0.16);
+		border-radius: 9999px;
+		background: rgba(8, 12, 10, 0.72);
+		color: #cfcabe;
+		cursor: pointer;
+		transition:
+			color 0.4s ease,
+			border-color 0.4s ease,
+			background 0.4s ease,
+			transform 0.4s ease;
+	}
+
+	.chat-arc-button svg {
+		width: 1.15rem;
+		height: 1.15rem;
+		transition: transform 0.4s ease;
+	}
+
+	.chat-arc-button:not(:disabled):hover {
+		color: #ece7db;
+		border-color: rgba(156, 175, 151, 0.55);
+		background: rgba(12, 18, 14, 0.85);
+		transform: translateY(-2px);
+	}
+
+	.chat-arc-button:not(:disabled):hover svg {
+		transform: translateY(-2px);
+	}
+
+	.chat-arc-button:disabled {
+		opacity: 0.35;
+		cursor: default;
+	}
+
+	.chat-refs {
+		min-height: 0;
+		overflow-y: auto;
+		padding: 1.5rem 1.25rem 2.5rem;
+		border-top: 1px solid rgba(236, 231, 219, 0.09);
+		background: rgba(7, 17, 12, 0.38);
+		backdrop-filter: blur(28px) saturate(150%);
+		-webkit-backdrop-filter: blur(28px) saturate(150%);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.06),
+			inset 1px 0 0 rgba(255, 255, 255, 0.04);
+	}
+
+	.chat-refs-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.chat-refs-head h2 {
+		margin: 0;
+		font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'Songti SC', 'STSong', 'SimSun',
+			serif;
+		font-size: 0.95rem;
+		font-weight: 500;
+		letter-spacing: 0.08em;
+		color: #e6e1d5;
+	}
+
+	.chat-refs-head > span {
+		font-size: 0.625rem;
+		letter-spacing: 0.16em;
+		color: #6c6a61;
+	}
+
+	.chat-refs-note {
+		margin: 0.55rem 0 0;
+		font-size: 0.6875rem;
+		line-height: 1.7;
+		color: #66645c;
+	}
+
+	.chat-ref-list {
+		margin: 1.6rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.chat-ref-list li {
+		padding: 1.1rem 0;
+		border-top: 1px solid rgba(236, 231, 219, 0.06);
+	}
+
+	.chat-ref-list li:first-child {
+		border-top: 0;
+		padding-top: 0;
+	}
+
+	.chat-ref-num {
+		font-family: 'Iowan Old Style', Georgia, 'Songti SC', 'SimSun', serif;
+		font-size: 0.6875rem;
+		letter-spacing: 0.1em;
+		color: #9caf97;
+		font-variant-numeric: oldstyle-nums;
+	}
+
+	.chat-ref-source {
+		margin: 0.35rem 0 0;
+		font-size: 0.625rem;
+		letter-spacing: 0.1em;
+		color: #6f6d64;
+	}
+
+	.chat-ref-title {
+		margin: 0.3rem 0 0;
+		font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'Songti SC', 'STSong', 'SimSun',
+			serif;
+		font-size: 0.9rem;
+		line-height: 1.65;
+		color: #d8d3c7;
+	}
+
+	.chat-ref-snippet {
+		margin: 0.35rem 0 0;
+		font-size: 0.75rem;
+		line-height: 1.75;
+		color: #8a867b;
+	}
+
+	.chat-ref-foot {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-top: 0.55rem;
+		font-size: 0.625rem;
+		letter-spacing: 0.08em;
+		color: #5a5850;
+	}
+
+	.chat-refs-empty {
+		margin: 1.6rem 0 0;
+		font-size: 0.75rem;
+		color: #66645c;
+	}
+
+	@media (min-width: 640px) {
+		.chat-transcript {
+			padding-inline: 2.5rem;
+		}
+
+		.chat-refs {
+			padding-inline: 1.75rem;
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.chat-shell {
+			height: 100dvh;
+			flex-direction: row;
+		}
+
+		.chat-transcript {
+			padding-left: 6rem;
+		}
+
+		.chat-refs {
+			width: 20rem;
+			height: 100%;
+			flex-shrink: 0;
+			overflow-y: auto;
+			border-top: 0;
+			border-left: 1px solid rgba(236, 231, 219, 0.09);
+			padding-top: 1.75rem;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.chat-transcript {
+			padding-top: 6.5rem;
+		}
+
+		.chat-turn {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 0.6rem;
+			padding: 2rem 0;
+		}
+
+		.chat-index {
+			flex-direction: row;
+			align-items: baseline;
+			gap: 0.6rem;
+			padding-top: 0;
+		}
+	}
+</style>

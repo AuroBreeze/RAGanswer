@@ -270,7 +270,7 @@ void main(){
 
 <canvas
 	bind:this={canvas}
-	class={`pointer-events-none fixed inset-0 z-0 h-full w-full transition-opacity duration-1000 ease-out motion-reduce:transition-none ${
+	class={`pointer-events-none fixed inset-0 z-0 h-full w-full transition-opacity duration-1000 ease-out ${
 		visible ? 'opacity-100' : 'opacity-0'
 	}`}
 	aria-hidden="true"
