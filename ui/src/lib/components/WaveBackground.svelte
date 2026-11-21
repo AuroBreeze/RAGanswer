@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
+	let { ontap }: { ontap?: () => void } = $props();
+
 	const WID = 0.42;
 	const SPEED = 0.42;
 	const INS = 0.06;
@@ -170,6 +172,7 @@ void main(){
 		function handlePointerDown(event: PointerEvent) {
 			if (event.button !== 0) return;
 			addWave(event.clientX, event.clientY);
+			ontap?.();
 		}
 
 		resize();
