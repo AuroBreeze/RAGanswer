@@ -61,7 +61,12 @@
 		style:background-color={chatColors[(conversation.length + 3) % chatColors.length]}
 		aria-hidden="true"
 	></div>
-	<div class="pointer-events-none fixed inset-0 z-[1] opacity-[0.14]" aria-hidden="true">
+	<div
+		class="pointer-events-none fixed inset-0 z-[1] transition-opacity duration-1000 ease-out motion-reduce:transition-none"
+		class:opacity-[0.14]={!listening && !inChat}
+		class:opacity-[0.55]={listening || inChat}
+		aria-hidden="true"
+	>
 		<MeltBackground revealed={true} />
 	</div>
 	<WaveBackground visible={!inChat} />
