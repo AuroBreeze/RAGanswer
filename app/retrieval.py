@@ -4,6 +4,7 @@ from __future__ import annotations
 import array
 import math
 import re
+from urllib.parse import quote
 
 from . import llm, registry
 from .config import get_settings
@@ -61,13 +62,17 @@ def _citation(u: dict) -> Citation:
     r, first = u["row"], u["srcs"][0]["locator"]
     s = get_settings()
     path = jload(r["section_path"], [])
-    url = s.preview_url_template.format(document_id=r["document_id"])
+    url = None
+    if s.preview_url_template:
+        url = s.preview_url_template.format(document_id=quote(r["document_id"], safe=""))
     if first["type"] == "pdf":
-        page, url = first["page"], f"{url}#page={first['page']}"
+        page = first["page"]
+        if url:
+            url = f"{url}#page={page}"
     else:
         page = None
-        if first.get("anchor"):
-            url = f"{url}#{first['anchor']}"
+        if url and first.get("anchor"):
+            url = f"{url}#{quote(first['anchor'], safe='')}"
     excerpt = re.sub(r"\s+", " ", u["text"]).strip()
     return Citation(document_id=r["document_id"], title=r["title"], version=r["version"],
                     section=" > ".join(path) if path else None, page=page,

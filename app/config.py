@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     artifact_root: Path = Path("./data/storage")
     max_artifact_bytes: int = 50 * 1024 * 1024
     # 内部接口服务身份（逗号分隔多个）
-    service_tokens: str = "parser-service-token-change-me"
+    service_tokens: str = ""
 
     # Embedding：openai（OpenAI 兼容接口）| hash（离线，仅联调/测试）
     embedding_provider: str = "openai"
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     index_max_retries: int = 3
 
     # 出处里的受控预览路径（由后端实现并按账号鉴权）
-    preview_url_template: str = "/api/v1/documents/{document_id}/preview"
+    preview_url_template: str = ""
 
     @property
     def tokens(self) -> set[str]:

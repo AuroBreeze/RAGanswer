@@ -27,6 +27,7 @@ copy .env.example .env   # 填写 OpenAI 兼容接口的地址与 Key
 
 - 内部接口使用 `Authorization: Bearer <RAG_SERVICE_TOKENS>`。
 - `/api/v1/chat` 的用户身份由后端鉴权后通过请求头传入：`X-User-Id`、`X-User-Roles`（逗号分隔）、`X-User-Factory`、`X-User-Workshop`。授权列表为空表示该维度不限制。
+- 没有受控预览路由时，保留 `RAG_PREVIEW_URL_TEMPLATE` 为空，答案仍会返回引用标题、章节、页码和摘录。
 - 同进程部署时可直接调用 `app.ingest.submit(IngestionRequest(...))`，无需走 HTTP。
 - 顺序要求：**先登记文档，再提交入库**（否则 404 `DOCUMENT_NOT_FOUND`）。
 

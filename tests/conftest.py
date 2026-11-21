@@ -15,6 +15,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("RAG_SERVICE_TOKENS", TOKEN)
     monkeypatch.setenv("RAG_EMBEDDING_PROVIDER", "hash")
     monkeypatch.setenv("RAG_LLM_PROVIDER", "extractive")
+    monkeypatch.setenv("RAG_PREVIEW_URL_TEMPLATE", "/api/v1/documents/{document_id}/preview")
     from app import ingest
     from app.config import get_settings
     get_settings.cache_clear()
