@@ -6,7 +6,8 @@
 	const WID = 0.42;
 	const SPEED = 0.42;
 	const INS = 0.06;
-	const LAM = 0.17;
+	// 单次脉冲：波长大于脉冲包络，避免一次触摸出现多圈波纹
+	const LAM = 1.1;
 
 	const vertexShader = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
 
@@ -56,10 +57,10 @@ void main(){
 	float q=g.r/max(g.a,.001);
 	float lt=g.g/max(g.a,.001);
 
-	for(int l=0;l<3;l++){
-		float fl=2.-float(l);
+	for(int l=0;l<4;l++){
+		float fl=3.-float(l);
 		float hm=.55+.45*(.6*sin(p.x*(7.+fl*2.5)+uT*(1.1+fl*.35)+fl*1.7)+.4*sin(p.x*(13.-fl*2.)-uT*(.8+fl*.3)+fl));
-		float Hl=(.07+fl*.05)*hm*(.35+.65*g.a);
+		float Hl=(.05+fl*.04)*hm*(.35+.65*g.a);
 		float prof=exp(-pow(max(p.y,0.)/max(Hl,.001),1.6));
 		vec3 c=pal(.5+.5*sin(uT*.9+q*6.2832+fl*.9))*lt;
 		col=mix(col,c*(1.05-.12*fl),g.a*prof*(.95-.2*fl));

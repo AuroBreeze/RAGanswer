@@ -360,6 +360,8 @@ vec4 render(vec3 ro, vec3 rd)
     vec3 refr = mix(rest, L0.rgb, L0.a);
 
     vec3 col = refr;      // no outer reflection / specular highlight
+    // lift midtones so the orb reads brighter against the dark background
+    col = pow(max(col, 0.), vec3(0.84)) * 1.15;
     return vec4(clamp(col, 0., 1.), 1.);
 }
 
