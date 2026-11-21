@@ -16,7 +16,7 @@ import (
 )
 
 const sample = `<!doctype html><html><head><title>网页标题</title></head><body>
-<nav>无关导航</nav><main><h1 id="manual">维护手册</h1><h2 id="check">点检</h2>
+<nav>无关导航</nav><main>&#65279;<h1 id="manual">维护手册</h1><h2 id="check">点检</h2>
 <p>压力须为 <b>8 MPa</b>。<br>每班点检。</p><ol start="3"><li>关阀<ul><li>记录数值</li></ul></li></ol>
 <table><caption>点检阈值</caption><tr><th>项目</th><th>单位</th></tr><tr><td>压力</td><td>MPa</td></tr></table>
 <script>doNotIncludeThisScript()</script><p hidden>隐藏文字</p><p style="display: none !important">隐藏内容</p></main></body></html>`

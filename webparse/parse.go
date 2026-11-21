@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 	"time"
+	"unicode"
 
 	"golang.org/x/net/html"
 )
@@ -376,7 +377,9 @@ func textContent(node *html.Node) string {
 }
 
 func cleanText(text string) string {
-	return strings.TrimSpace(strings.ReplaceAll(text, "\r", ""))
+	return strings.TrimFunc(strings.ReplaceAll(text, "\r", ""), func(r rune) bool {
+		return r == '\uFEFF' || unicode.IsSpace(r)
+	})
 }
 
 func appendText(b *strings.Builder, node *html.Node, omitLists bool) {
