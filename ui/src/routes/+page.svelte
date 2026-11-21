@@ -3,6 +3,7 @@
 	import { fade } from 'svelte/transition';
 	import JellyOrb from '#lib/components/JellyOrb.svelte';
 	import WaveBackground from '#lib/components/WaveBackground.svelte';
+	import MeltBackground from '#lib/components/MeltBackground.svelte';
 
 	const prompts = [
 		'帮我总结一段文字',
@@ -44,6 +45,14 @@
 
 <main class="relative flex min-h-dvh w-full flex-col bg-[#050706] text-zinc-100">
 	<WaveBackground ontap={handleScreenTap} />
+	<MeltBackground revealed={active} />
+	<div
+		class={`pointer-events-none fixed inset-0 z-[1] transition-opacity duration-[1600ms] ease-out ${
+			active ? 'opacity-100' : 'opacity-0'
+		}`}
+		style="background: radial-gradient(ellipse at 50% 45%, rgba(3, 6, 5, 0.55), rgba(3, 6, 5, 0.12) 62%, transparent 82%);"
+		aria-hidden="true"
+	></div>
 
 	<div class="relative z-10 flex flex-1 flex-col items-center justify-start px-4 pb-10 pt-40 sm:justify-center sm:pt-44">
 		<section
