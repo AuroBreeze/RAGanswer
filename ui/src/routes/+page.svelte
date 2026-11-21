@@ -241,7 +241,9 @@
 		aria-hidden="true"
 	></div>
 	<div
-		class="pointer-events-none fixed inset-0 z-[1] opacity-[0.14]"
+		class={`pointer-events-none fixed inset-0 z-[1] transition-opacity duration-1000 ease-out motion-reduce:transition-none ${
+			phase === 'idle' ? 'opacity-[0.14]' : 'opacity-[0.55]'
+		}`}
 		aria-hidden="true"
 	>
 		<MeltBackground revealed={true} />
