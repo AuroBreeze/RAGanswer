@@ -54,20 +54,22 @@
 </svelte:head>
 
 <main class="relative min-h-dvh w-full overflow-x-hidden bg-[#050706] text-zinc-100">
-	<WaveBackground visible={!inChat} />
-	<MeltBackground revealed={listening && !inChat} />
-	<div
-		class="pointer-events-none fixed inset-0 z-[1] transition-opacity duration-[1600ms] ease-out motion-reduce:transition-none"
-		class:opacity-100={listening && !inChat}
-		class:opacity-0={!listening || inChat}
-		style="background: radial-gradient(ellipse at 50% 45%, rgba(3, 6, 5, 0.55), rgba(3, 6, 5, 0.12) 62%, transparent 82%);"
-		aria-hidden="true"
-	></div>
 	<div
 		class="pointer-events-none fixed inset-0 z-0 transition-all duration-1000 ease-out motion-reduce:transition-none"
 		class:opacity-100={inChat}
 		class:opacity-0={!inChat}
 		style:background-color={chatColors[(conversation.length + 3) % chatColors.length]}
+		aria-hidden="true"
+	></div>
+	<div class="pointer-events-none fixed inset-0 z-0 opacity-[0.14]" aria-hidden="true">
+		<MeltBackground revealed={true} />
+	</div>
+	<WaveBackground visible={!inChat} />
+	<div
+		class="pointer-events-none fixed inset-0 z-[1] transition-opacity duration-[1600ms] ease-out motion-reduce:transition-none"
+		class:opacity-100={listening && !inChat}
+		class:opacity-0={!listening || inChat}
+		style="background: radial-gradient(ellipse at 50% 45%, rgba(3, 6, 5, 0.55), rgba(3, 6, 5, 0.12) 62%, transparent 82%);"
 		aria-hidden="true"
 	></div>
 	<div
