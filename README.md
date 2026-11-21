@@ -1,49 +1,15 @@
-# RAGanswer 网页与 PDF 解析
+# RAGanswer
 
-按 [网页与 PDF 解析和 RAG 入库对接协议](docs/网页与PDF解析-RAG入库对接协议.md) 1.0 生成网页 NDJSON。解析端接收来源登记方分配的 `source_id`、`document_id`、`parse_id` 和网页快照，输出 `parsed` 或带 `code`、`message`、`retryable` 的 `failed`。网页产物可交给 RAG 入库方。
+面向工厂制度和设备知识的问答应用。从网页或 PDF 提取文本和原文定位，建立带权限的知识索引，再通过网页界面提问并查看来源。
 
-## 运行
+| 层 | 目录 | 职责 |
+| --- | --- | --- |
+| 解析 | `cmd/webparse/`、`cmd/pdfparse/`、`webparse/`、`internal/pdfparse/` | 读取受控快照，输出带原文定位和摘要校验的 NDJSON 1.0。 |
+| RAG 服务 | `app/`、`tests/` | 核对来源登记和摘要，切分并索引文档，按权限检索并返回答案及引用。 |
+| 界面 | `ui/` | 提问、展示答案和引用。 |
+| 协议 | `docs/` | 定义解析产物、入库任务和问答响应。 |
 
-需要 Go 1.26 和一个现有的私有存储目录。存储目录应仅供授权服务访问，里面的原始 HTML 快照不适合直接对外提供预览。
-
-```sh
-go run ./cmd/webparse capture -store ./private-data -url https://example.com/manual -allow-hosts example.com
-go run ./cmd/webparse parse -store ./private-data < request.json
-```
-
-`capture` 使用来源登记方批准的 URL 和主机列表，返回快照引用、最终 URL、原件 SHA-256 和响应字符编码。首版支持公开可访问的静态 HTML、HTTP/HTTPS 默认端口和精确主机名单。URL 不接受查询字符串或访问凭证。每次跳转重新检查主机，连接仅使用已校验的公网 IP。网页抓取时限为 20 秒，原件上限为 4 MiB，解析包上限为 16 MiB。
-
-`request.json` 的 `task` 对应协议第 1.1 节，`document` 由来源登记信息和抓取结果组成。下面用占位值演示字段，实际调用填入 `capture` 返回的 `snapshot_ref`、`original_url`、`source_sha256` 和 `content_type`。
-
-```json
-{
-  "task": {
-    "parse_id": "parse_web_001",
-    "source_id": "src_manual",
-    "document_id": "doc_manual_r1",
-    "source_type": "web",
-    "snapshot_ref": "snapshot/web/manual-r1.html"
-  },
-  "document": {
-    "title": "操作手册",
-    "version": null,
-    "original_url": "https://example.com/manual",
-    "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "content_type": "text/html; charset=utf-8"
-  }
-}
-```
-
-服务端也可直接调用 `webparse.Capture` 和 `webparse.ParseSnapshot`。每份解析包的首行是文档头，后续行按阅读顺序保存标题、段落、列表、表格和题注。解析器使用原有锚点，缺失时输出 `anchor: null` 并标记 `quality: partial`。`partial` 由协议规定的来源侧复核后交给 RAG。
-
-成功产物写入 `parsed/<parse_id>/document.ndjson`。任务重投时复用已发布的产物和摘要。原件内容变更时登记新 `document_id`，调整解析配置时使用新 `parse_id`。分服务联调时，由调用方将 `document_id`、`parse_id`、`artifact_ref` 和 `artifact_sha256` 交给协议第 5 节的入库接口，并为入库服务配置同一受控存储。
-
-## PDF 解析
-
-```sh
-go run ./cmd/pdfparse -in ./private-data/manual.pdf -out ./private-data/manual.ndjson -parse-id parse_pdf_001 -source-id src_manual_pdf -document-id doc_manual_pdf_r1 -snapshot-ref snapshot/pdf/manual.pdf -ocr off
-```
-
-PDF 解析按协议输出 NDJSON 1.0，并在 `locator.page` 记录从 1 开始的物理页序。使用 `-out -` 可将产物写到标准输出。解析失败时，错误对象写到标准错误。
-
-`-ocr off` 仅处理 PDF 文本层。`-ocr auto` 在全篇无法抽取文本时尝试已配置的 OCR 服务，`-ocr force` 则直接调用 OCR。OCR 会向配置的服务上传原始 PDF，仅对获准发送给该服务的文档启用。使用 `OCR_ENDPOINT` 和 `OCR_API_KEY` 配置服务和凭据。源码也支持 `DEEPSEEK_API_KEY` 作为凭据来源。
+- [网页和 PDF 解析运行说明](docs/parsers.md)
+- [RAG 服务安装、配置与接口](docs/rag-service.md)
+- [解析与入库协议](docs/网页与PDF解析-RAG入库对接协议.md)
+- [前后端问答接口协议](docs/工厂知识问答机器人-前后端接口协议.md)
