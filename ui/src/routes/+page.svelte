@@ -351,7 +351,7 @@
 			</section>
 
 			<aside
-				class="min-h-0 w-full overflow-y-auto border-t border-white/10 bg-[#070b09]/80 px-5 pb-10 pt-6 backdrop-blur-xl lg:h-full lg:w-80 lg:border-l lg:border-t-0"
+				class="min-h-0 w-full overflow-y-auto border-t border-white/10 bg-[#07110c]/45 px-5 pb-10 pt-6 shadow-[inset_1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-2xl backdrop-saturate-150 lg:h-full lg:w-80 lg:border-l lg:border-t-0"
 				in:fly={{ x: 80, duration: 700, delay: 120 }}
 				aria-label="参考文献"
 			>
