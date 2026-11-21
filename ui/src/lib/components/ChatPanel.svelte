@@ -12,9 +12,9 @@
 		abort(): void;
 	}
 
+	let { listening = $bindable(false) }: { listening?: boolean } = $props();
 	let question = $state('');
 	let pending = $state(false);
-	let listening = $state(false);
 	let error = $state('');
 	let voiceError = $state('');
 	let result = $state<ChatAnswer | null>(null);
