@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	let { ontap }: { ontap?: () => void } = $props();
+	let { ontap, visible = true }: { ontap?: () => void; visible?: boolean } = $props();
 
 	const WID = 0.42;
 	const SPEED = 0.42;
@@ -171,7 +171,7 @@ void main(){
 		}
 
 		function handlePointerDown(event: PointerEvent) {
-			if (event.button !== 0) return;
+			if (!visible || event.button !== 0) return;
 			addWave(event.clientX, event.clientY);
 			ontap?.();
 		}
@@ -185,6 +185,11 @@ void main(){
 		let frameId = 0;
 
 		function frame(now: number) {
+			if (!visible) {
+				frameId = requestAnimationFrame(frame);
+				return;
+			}
+
 			const dt = Math.min(0.033, (now - last) / 1000);
 			last = now;
 
@@ -265,6 +270,8 @@ void main(){
 
 <canvas
 	bind:this={canvas}
-	class="pointer-events-none fixed inset-0 z-0 h-full w-full"
+	class={`pointer-events-none fixed inset-0 z-0 h-full w-full transition-opacity duration-1000 ease-out motion-reduce:transition-none ${
+		visible ? 'opacity-100' : 'opacity-0'
+	}`}
 	aria-hidden="true"
 ></canvas>
