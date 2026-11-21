@@ -8,6 +8,29 @@ def ask(client, q, h=None):
     return r.json()
 
 
+def test_source_lookup_finds_existing_article_without_inventing_a_profile(client, tmp_path, monkeypatch):
+    from app import llm
+
+    head = header(source_id="src_news", document_id="doc_news", source_type="web", title="林晓晴课题组发表研究成果",
+                  version=None, original_url="https://example.com/news", page_count=None)
+    register(client, head, factories=["F1"])
+    blocks = [web_block(1, "林晓晴课题组发表了一项深度估计研究。", "news", section=("科研动态",)),
+              web_block(2, "论文介绍了用于改善遮挡场景深度预测的方法。", "method", section=("论文方法",))]
+    assert ingest(client, tmp_path, head, blocks)[0]["status"] == "ready"
+
+    def unexpected_model_call(*_):
+        raise AssertionError("exact source lookup should not need a model")
+
+    monkeypatch.setattr(llm, "embed", unexpected_model_call)
+    monkeypatch.setattr(llm, "generate", unexpected_model_call)
+    question = "我想要查看林晓晴老师的资料"
+    result = ask(client, question)
+    assert "林晓晴课题组发表研究成果" in result["answer"]
+    assert "[1]" in result["answer"] and len(result["citations"]) == 1
+    assert result["citations"][0]["document_id"] == "doc_news"
+    assert ask(client, question, user(factory="F2"))["citations"] == []
+
+
 def test_web_page_citation(client, tmp_path):
     head = header(source_id="src_web", document_id="doc_web_r1", source_type="web", title="新员工培训须知",
                   version=None, original_url="https://example.com/training", page_count=None)
