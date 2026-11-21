@@ -5,30 +5,30 @@ import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, process.cwd(), 'RAG_');
-	const demoUser = env.RAG_DEV_USER_ID;
+	const demoUser = env.RAG_DEV_USER_ID || process.env.RAG_DEV_USER_ID || 'local-demo';
+	const apiTarget = env.RAG_API_URL || process.env.RAG_API_URL || 'http://127.0.0.1:8080';
+
 	return {
 		server: {
 			host: '127.0.0.1',
 			proxy: {
 				'/api/v1/chat': {
-					target: env.RAG_API_URL || 'http://127.0.0.1:8080',
-					configure(proxy) {
-						proxy.on('proxyReq', (request) => {
-							for (const header of [
-								'x-user-id',
-								'x-user-roles',
-								'x-user-factory',
-								'x-user-workshop'
-							]) {
-								request.removeHeader(header);
-							}
-							if (demoUser) request.setHeader('x-user-id', demoUser);
-						});
-					}
+					target: apiTarget
 				}
 			}
 		},
 		plugins: [
+			{
+				name: 'rag-dev-identity',
+				configureServer(server) {
+					server.middlewares.use((request, _response, next) => {
+						if (request.url?.startsWith('/api/v1/chat')) {
+							request.headers['x-user-id'] = demoUser;
+						}
+						next();
+					});
+				}
+			},
 			tailwindcss(),
 			sveltekit({
 				compilerOptions: {

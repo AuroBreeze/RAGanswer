@@ -4,6 +4,7 @@
 	import JellyOrb from '#lib/components/JellyOrb.svelte';
 	import WaveBackground from '#lib/components/WaveBackground.svelte';
 	import MeltBackground from '#lib/components/MeltBackground.svelte';
+	import { askQuestion, type Citation } from '#lib/api/chat.js';
 
 	type Phase = 'idle' | 'listening' | 'chat';
 
@@ -132,6 +133,23 @@
 		}
 	];
 
+	function toReference(citation: Citation): Reference {
+		const locator = [
+			citation.version,
+			citation.section,
+			citation.page == null ? null : `第 ${citation.page} 页`
+		]
+			.filter(Boolean)
+			.join(' · ');
+		return {
+			source: citation.title,
+			title: citation.section || citation.title,
+			snippet: citation.excerpt,
+			locator: locator || '知识库',
+			score: '—'
+		};
+	}
+
 	const chatColors = ['#050807', '#07120e', '#08131a', '#0b0f08'];
 
 	let promptIndex = $state(0);
@@ -209,42 +227,68 @@
 		inputTimer = setTimeout(enterChat, 2000);
 	}
 
-	function enterChat() {
+	async function enterChat() {
+		const query = speech.trim() || mockTurns[0].question;
 		phase = 'chat';
-		conversation = [{ question: speech }];
+		conversation = [{ question: query }];
 		references = [];
 		typing = true;
 		clearInputTimer();
-		inputTimer = setTimeout(() => {
+		try {
+			const result = await askQuestion(query);
 			conversation = [
 				{
-					question: speech,
-					answer: mockTurns[0].answer,
-					citations: mockTurns[0].citations
+					question: query,
+					answer: result.answer,
+					citations: result.citations.map((_, i) => i + 1)
 				}
 			];
-			references = mockTurns[0].references;
+			references = result.citations.map(toReference);
+		} catch (failure) {
+			conversation = [
+				{
+					question: query,
+					answer: failure instanceof Error ? failure.message : '问答失败，请重试。',
+					citations: []
+				}
+			];
+		} finally {
 			typing = false;
-		}, 900);
+		}
 	}
 
-	function handleChatInput() {
+	async function handleChatInput() {
 		if (phase !== 'chat' || typing) return;
 		turnIndex = (turnIndex + 1) % mockTurns.length;
-		const next = mockTurns[turnIndex];
-		conversation = [...conversation, { question: next.question }];
+		const query = mockTurns[turnIndex].question;
+		conversation = [...conversation, { question: query }];
 		typing = true;
 		backgroundIndex = (backgroundIndex + 1) % chatColors.length;
-		clearInputTimer();
-		inputTimer = setTimeout(() => {
+		try {
+			const result = await askQuestion(query);
 			conversation = conversation.map((turn, i) =>
 				i === conversation.length - 1
-					? { ...turn, answer: next.answer, citations: next.citations }
+					? {
+							...turn,
+							answer: result.answer,
+							citations: result.citations.map((_, idx) => idx + 1)
+						}
 					: turn
 			);
-			references = next.references;
+			references = result.citations.map(toReference);
+		} catch (failure) {
+			conversation = conversation.map((turn, i) =>
+				i === conversation.length - 1
+					? {
+							...turn,
+							answer: failure instanceof Error ? failure.message : '问答失败，请重试。',
+							citations: []
+						}
+					: turn
+			);
+		} finally {
 			typing = false;
-		}, 900);
+		}
 	}
 
 	onMount(() => {
@@ -350,9 +394,7 @@
 												<span>知识库 · {turn.citations?.length ?? 0} 条</span>
 											</p>
 											<p class="chat-answer">
-												{turn.answer}{#if turn.citations?.length}<span class="chat-cites"
-														>{#each turn.citations ?? [] as citation}<sup>{citation}</sup>{/each}</span
-													>{/if}
+												{turn.answer}
 											</p>
 										</div>
 									{/if}
@@ -627,19 +669,6 @@
 		line-height: 1.95;
 		color: #c9c4b8;
 		text-wrap: pretty;
-	}
-
-	.chat-cites {
-		white-space: nowrap;
-	}
-
-	.chat-cites sup {
-		margin-left: 0.18em;
-		font-family: 'Iowan Old Style', Georgia, serif;
-		font-size: 0.62em;
-		line-height: 0;
-		vertical-align: super;
-		color: #9caf97;
 	}
 
 	.chat-loader {
