@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import { askQuestion, citationHref, type ChatAnswer } from '../api/chat.js';
 
 	interface SpeechInput {
 		lang: string;
@@ -12,28 +11,25 @@
 		abort(): void;
 	}
 
-	let { listening = $bindable(false) }: { listening?: boolean } = $props();
+	let {
+		listening = $bindable(false),
+		pending = false,
+		onask
+	}: {
+		listening?: boolean;
+		pending?: boolean;
+		onask: (question: string) => Promise<void>;
+	} = $props();
 	let question = $state('');
-	let pending = $state(false);
-	let error = $state('');
 	let voiceError = $state('');
-	let result = $state<ChatAnswer | null>(null);
 	let speech: SpeechInput | undefined;
 
 	async function ask(event: SubmitEvent) {
 		event.preventDefault();
 		const query = question.trim();
 		if (!query || pending || listening) return;
-		pending = true;
-		error = '';
-		result = null;
-		try {
-			result = await askQuestion(query);
-		} catch (failure) {
-			error = failure instanceof Error ? failure.message : '问答失败，请重试。';
-		} finally {
-			pending = false;
-		}
+		question = '';
+		await onask(query);
 	}
 
 	function toggleListening() {
@@ -108,40 +104,3 @@
 </form>
 
 {#if voiceError}<p class="mt-3 text-sm text-amber-200" role="status">{voiceError}</p>{/if}
-{#if error}<p class="mt-3 text-sm text-rose-200" role="alert">{error}</p>{/if}
-{#if pending}<p class="mt-4 text-sm text-zinc-300" role="status">正在查询知识库…</p>{/if}
-
-{#if result}
-	<section
-		aria-label="问答结果"
-		aria-live="polite"
-		class="mt-6 space-y-4 border-t border-white/10 pt-5"
-	>
-		<h2 class="text-lg font-medium text-zinc-100">回答</h2>
-		<p class="text-sm leading-7 whitespace-pre-wrap text-zinc-200">{result.answer}</p>
-		{#if result.citations.length}
-			<h3 class="text-sm font-medium text-zinc-300">出处</h3>
-			<ol class="space-y-3">
-				{#each result.citations as citation, index (citation.document_id + ':' + index)}
-					{@const href = citationHref(citation.url)}
-					<li class="rounded-xl border border-white/10 px-4 py-3 text-sm">
-						<p class="font-medium text-emerald-200">[{index + 1}] {citation.title}</p>
-						<p class="mt-1 text-xs text-zinc-400">
-							{[
-								citation.version,
-								citation.section,
-								citation.page === null ? null : `第 ${citation.page} 页`
-							]
-								.filter(Boolean)
-								.join(' · ')}
-						</p>
-						<blockquote class="mt-2 leading-6 text-zinc-300">{citation.excerpt}</blockquote>
-						{#if href}<a class="mt-2 inline-block text-emerald-300 underline" {href} rel="external">
-								打开原文
-							</a>{/if}
-					</li>
-				{/each}
-			</ol>
-		{/if}
-	</section>
-{/if}
