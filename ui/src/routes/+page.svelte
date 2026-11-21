@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import JellyOrb from '#lib/components/JellyOrb.svelte';
+	import WaveBackground from '#lib/components/WaveBackground.svelte';
 
 	const prompts = [
 		'帮我总结一段文字',
@@ -13,11 +14,6 @@
 	const categories = ['全部', '写作', '代码', '分析', '灵感'];
 
 	let index = $state(0);
-	let listening = $state(false);
-
-	function toggleListening() {
-		listening = !listening;
-	}
 
 	onMount(() => {
 		const timer = setInterval(() => {
@@ -33,35 +29,10 @@
 </svelte:head>
 
 <main class="relative flex min-h-dvh w-full flex-col bg-[#050706] text-zinc-100">
-	<div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-		<div
-			class="absolute inset-0"
-			style="background:
-				radial-gradient(ellipse at 50% -8%, rgba(16, 185, 129, 0.20), transparent 55%),
-				radial-gradient(ellipse at 85% 100%, rgba(6, 78, 59, 0.16), transparent 52%),
-				linear-gradient(180deg, #070b09 0%, #050706 55%, #030504 100%);"
-		></div>
-	</div>
+	<WaveBackground />
 
 	<header class="relative z-10 flex items-center justify-between px-5 py-5 sm:px-10">
 		<div class="flex items-center gap-2 text-sm text-zinc-400">
-			<button
-				type="button"
-				class="grid h-8 w-8 place-items-center rounded-lg text-zinc-500 transition hover:bg-white/5 hover:text-zinc-300"
-				aria-label="返回"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke-width="1.7"
-					stroke="currentColor"
-					class="h-4 w-4"
-					aria-hidden="true"
-				>
-					<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-				</svg>
-			</button>
 			<span class="text-zinc-300">New chat</span>
 			<span
 				class="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-medium tracking-wide text-emerald-300"
@@ -149,23 +120,14 @@
 				{/each}
 			</div>
 
-			<button
-				type="button"
-				class={`mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-2xl px-6 text-sm font-medium shadow-2xl shadow-black/30 transition ${
-					listening
-						? 'bg-emerald-400 text-emerald-950 hover:bg-emerald-300'
-						: 'bg-white text-zinc-900 hover:bg-zinc-100'
-				}`}
-				onclick={toggleListening}
-				aria-pressed={listening}
-			>
+			<p class="mt-6 flex select-none items-center justify-center gap-2 text-sm text-zinc-400">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke-width="1.7"
 					stroke="currentColor"
-					class="h-5 w-5"
+					class="h-4 w-4 animate-pulse text-emerald-400"
 					aria-hidden="true"
 				>
 					<path
@@ -174,23 +136,8 @@
 						d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
 					/>
 				</svg>
-
-				<span>{listening ? '正在聆听，点击结束' : '点击说话'}</span>
-
-				{#if listening}
-					<span class="flex items-center gap-1" aria-hidden="true">
-						<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-950/70"></span>
-						<span
-							class="h-2.5 w-1.5 animate-pulse rounded-full bg-emerald-950/70"
-							style="animation-delay: 120ms;"
-						></span>
-						<span
-							class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-950/70"
-							style="animation-delay: 240ms;"
-						></span>
-					</span>
-				{/if}
-			</button>
+				触摸屏幕来输入语音
+			</p>
 		</section>
 
 		<p class="mt-8 text-center text-[11px] text-zinc-600">
