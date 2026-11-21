@@ -71,7 +71,14 @@ def run(job_id: str) -> None:
         return
     _set(job_id, "indexing")
     try:
-        pkg = parse_package(read_artifact(job["artifact_ref"]), job["artifact_sha256"])
+        doc = registry.require_document(job["document_id"])
+        pkg = parse_package(
+            read_artifact(job["artifact_ref"]),
+            job["artifact_sha256"],
+            fallback_document_id=job["document_id"],
+            fallback_source_id=doc["source_id"],
+            fallback_parse_id=job["parse_id"],
+        )
         _validate_against_registry(job, pkg)
         chunks = chunk_blocks(pkg.blocks, s.chunk_max_chars, s.chunk_overlap_chars)
         # 向量化文本带上标题与章节，提高召回；存储的 text 仍为原文

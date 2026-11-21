@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 
 from pydantic import ValidationError
 
+from . import adapters
 from .config import get_settings
 from .errors import ARTIFACT_INVALID, ProtocolError
 from .models import Block, DocumentHeader
@@ -38,13 +39,39 @@ def read_artifact(artifact_ref: str) -> bytes:
     return full.read_bytes()
 
 
-def parse_package(data: bytes, expected_sha256: str) -> Package:
+def parse_package(
+    data: bytes,
+    expected_sha256: str,
+    *,
+    fallback_document_id: str | None = None,
+    fallback_source_id: str | None = None,
+    fallback_parse_id: str | None = None,
+) -> Package:
     if hashlib.sha256(data).hexdigest() != expected_sha256:
         raise _bad("解析包摘要不匹配。")
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError:
         raise _bad("解析包不是 UTF-8 编码。")
+    # 兼容单个 JSON 展示样例（selected_web_extraction_for_display）
+    stripped = text.strip()
+    if stripped.startswith("{"):
+        try:
+            whole = json.loads(stripped)
+        except ValueError:
+            whole = None
+        if adapters.is_display_sample(whole):
+            try:
+                header, blocks = adapters.parse_display_sample(
+                    whole,
+                    document_id=fallback_document_id,
+                    source_id=fallback_source_id,
+                    parse_id=fallback_parse_id,
+                )
+            except ValidationError as e:
+                raise _bad(f"展示样例无效: {e}")
+            return Package(header, blocks)
+
     lines = [ln for ln in text.splitlines() if ln.strip()]
     if not lines:
         raise _bad("解析包为空。")

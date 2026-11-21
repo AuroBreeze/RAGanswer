@@ -125,3 +125,110 @@ def test_request_errors(client):
     assert r.status_code == 404 and r.json()["error"]["code"] == "DOCUMENT_NOT_FOUND"
     r = client.post("/internal/v1/ingestions", json={**body, "artifact_sha256": "XYZ"}, headers=SVC)
     assert r.status_code == 400 and r.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_selected_web_extraction_display_sample(client, tmp_path):
+    import hashlib
+    import json
+
+    sample = {
+        "sample_type": "selected_web_extraction_for_display",
+        "source_url": "https://cyber.qfnu.edu.cn/info/1006/2989.htm",
+        "document_title": "王来花课题组在IEEE TCE发表最新研究成果-曲阜师范大学网络空间安全学院",
+        "displayed_facts": {
+            "page_date": "2026-07-13",
+            "journal": "IEEE Transactions on Consumer Electronics",
+            "paper_title": "Enhanced Modeling for Self-Supervised Monocular Depth Estimation",
+            "first_author": "魏光辉",
+            "corresponding_author": "王来花",
+            "doi": "10.1109/TCE.2025.3645823",
+            "research_summary": "EM-Depth 是一种自监督单目深度估计模型，结合 Self-CutMix 合成遮挡、深度一致性和自蒸馏损失，以及多尺度解码来改善物体边界和复杂场景中的深度估计。",
+            "basis_block_ids": ["b000010", "b000011", "b000012", "b000013"],
+        },
+        "selected_original_blocks": [
+            {
+                "record_type": "block",
+                "block_id": "b000009",
+                "sequence": 9,
+                "kind": "paragraph",
+                "text": "王来花课题组在IEEE TCE发表最新研究成果",
+                "section_path": ["科学研究"],
+                "locator": {"type": "web", "anchor": None},
+                "extraction_method": "html",
+            },
+            {
+                "record_type": "block",
+                "block_id": "b000010",
+                "sequence": 10,
+                "kind": "paragraph",
+                "text": "日期：2026-07-13  来源：",
+                "section_path": ["科学研究"],
+                "locator": {"type": "web", "anchor": None},
+                "extraction_method": "html",
+            },
+            {
+                "record_type": "block",
+                "block_id": "b000013",
+                "sequence": 13,
+                "kind": "paragraph",
+                "text": "全文链接：https://doi.org/10.1109/TCE.2025.3645823",
+                "section_path": ["科学研究"],
+                "locator": {"type": "web", "anchor": None},
+                "extraction_method": "html",
+            },
+        ],
+        "test": {
+            "capture": "system_https",
+            "direct_capture_error": "WEB_ACCESS_DENIED",
+            "schema_version": "1.0",
+            "parse_id": "parse_qfnu_2989_test",
+            "quality": "partial",
+            "total_blocks": 19,
+            "anchored_blocks": 1,
+            "warnings": [{"code": "WEB_ANCHOR_MISSING", "message": "部分内容块缺少可用的原文锚点。"}],
+            "snapshot_sha256": "55b77e4b55f8daff10572110009fe1f668adf48dbc65ad7c1e16d4385f69040d",
+            "full_artifact_sha256": "f5095cba8109233a8f3674710cea4f11a459f9768cd91f9075341f50bbc9b2f6",
+            "duplicate_task_reused_artifact": True,
+        },
+    }
+
+    # 1) 登记文档（使用 snapshot_sha256）
+    r = client.post("/internal/v1/documents", headers=SVC, json={
+        "document_id": "doc_qfnu_2989",
+        "source_id": "src_qfnu_2989",
+        "source_type": "web",
+        "title": sample["document_title"],
+        "version": None,
+        "source_sha256": sample["test"]["snapshot_sha256"],
+    })
+    assert r.status_code == 204, r.text
+
+    # 2) 直接把该 JSON 作为解析包写入存储并提交入库
+    data = json.dumps(sample, ensure_ascii=False, indent=2).encode("utf-8")
+    p = tmp_path / "storage" / "parsed"
+    p.mkdir(parents=True, exist_ok=True)
+    (p / "qfnu_2989_display.json").write_bytes(data)
+    sha = hashlib.sha256(data).hexdigest()
+
+    r = client.post("/internal/v1/ingestions", headers=SVC, json={
+        "parse_id": "parse_qfnu_2989_test",
+        "document_id": "doc_qfnu_2989",
+        "artifact_ref": "parsed/qfnu_2989_display.json",
+        "artifact_sha256": sha,
+    })
+    assert r.status_code == 202, r.text
+    job_id = r.json()["job_id"]
+
+    # 3) quality=partial 触发复核，审批通过后自动入库 ready
+    st = client.get(f"/internal/v1/ingestions/{job_id}", headers=SVC).json()
+    assert st["status"] == "failed" and st["error"]["code"] == "SOURCE_NOT_APPROVED"
+    assert client.post("/internal/v1/parses/parse_qfnu_2989_test/approve", headers=SVC).status_code == 204
+    st = client.get(f"/internal/v1/ingestions/{job_id}", headers=SVC).json()
+    assert st["status"] == "ready" and st["indexed_chunk_count"] >= 1
+
+    # 4) 提问验证原始块与 displayed_facts 均可检索并带正确出处
+    res = ask(client, "EM-Depth 是什么？第一作者是谁？")
+    assert "EM-Depth" in res["answer"] and "魏光辉" in res["answer"]
+    c = res["citations"][0]
+    assert c["document_id"] == "doc_qfnu_2989" and c["page"] is None and c["section"] == "科学研究"
+
