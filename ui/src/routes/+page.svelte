@@ -13,6 +13,11 @@
 	const categories = ['全部', '写作', '代码', '分析', '灵感'];
 
 	let index = $state(0);
+	let listening = $state(false);
+
+	function toggleListening() {
+		listening = !listening;
+	}
 
 	onMount(() => {
 		const timer = setInterval(() => {
@@ -144,66 +149,48 @@
 				{/each}
 			</div>
 
-			<form
-				class="mt-6 flex w-full items-center gap-2 rounded-2xl bg-white p-2 pl-3 shadow-2xl shadow-black/30"
-				onsubmit={(event) => event.preventDefault()}
+			<button
+				type="button"
+				class={`mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-2xl px-6 text-sm font-medium shadow-2xl shadow-black/30 transition ${
+					listening
+						? 'bg-emerald-400 text-emerald-950 hover:bg-emerald-300'
+						: 'bg-white text-zinc-900 hover:bg-zinc-100'
+				}`}
+				onclick={toggleListening}
+				aria-pressed={listening}
 			>
-				<span
-					class="h-6 w-6 shrink-0 rounded-full"
-					style="background: radial-gradient(circle at 30% 30%, #d1fae5, #34d399 40%, #065f46 75%, #022c22);"
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="1.7"
+					stroke="currentColor"
+					class="h-5 w-5"
 					aria-hidden="true"
-				></span>
-
-				<label class="sr-only" for="prompt">输入你的问题</label>
-				<input
-					id="prompt"
-					name="prompt"
-					type="text"
-					placeholder="输入你的问题..."
-					autocomplete="off"
-					class="min-w-0 flex-1 bg-transparent px-1 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
-				/>
-
-				<button
-					type="button"
-					class="grid h-9 w-9 place-items-center rounded-xl text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
-					aria-label="语音输入"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="1.7"
-						stroke="currentColor"
-						class="h-4 w-4"
-						aria-hidden="true"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
-						/>
-					</svg>
-				</button>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
+					/>
+				</svg>
 
-				<button
-					type="submit"
-					class="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400 text-emerald-950 transition hover:bg-emerald-300"
-					aria-label="发送"
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="h-4 w-4"
-						aria-hidden="true"
-					>
-						<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0-6-6m6 6-6 6" />
-					</svg>
-				</button>
-			</form>
+				<span>{listening ? '正在聆听，点击结束' : '点击说话'}</span>
+
+				{#if listening}
+					<span class="flex items-center gap-1" aria-hidden="true">
+						<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-950/70"></span>
+						<span
+							class="h-2.5 w-1.5 animate-pulse rounded-full bg-emerald-950/70"
+							style="animation-delay: 120ms;"
+						></span>
+						<span
+							class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-950/70"
+							style="animation-delay: 240ms;"
+						></span>
+					</span>
+				{/if}
+			</button>
 		</section>
 
 		<p class="mt-8 text-center text-[11px] text-zinc-600">
