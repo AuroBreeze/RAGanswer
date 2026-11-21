@@ -122,7 +122,7 @@
 		{#if result.citations.length}
 			<h3 class="text-sm font-medium text-zinc-300">出处</h3>
 			<ol class="space-y-3">
-				{#each result.citations as citation, index}
+				{#each result.citations as citation, index (citation.document_id + ':' + index)}
 					{@const href = citationHref(citation.url)}
 					<li class="rounded-xl border border-white/10 px-4 py-3 text-sm">
 						<p class="font-medium text-emerald-200">[{index + 1}] {citation.title}</p>
@@ -136,7 +136,7 @@
 								.join(' · ')}
 						</p>
 						<blockquote class="mt-2 leading-6 text-zinc-300">{citation.excerpt}</blockquote>
-						{#if href}<a class="mt-2 inline-block text-emerald-300 underline" {href}>
+						{#if href}<a class="mt-2 inline-block text-emerald-300 underline" {href} rel="external">
 								打开原文
 							</a>{/if}
 					</li>

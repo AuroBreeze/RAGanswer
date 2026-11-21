@@ -1,9 +1,15 @@
 <script lang="ts">
 	import ChatPanel from '#lib/components/ChatPanel.svelte';
 	import JellyOrb from '#lib/components/JellyOrb.svelte';
+	import MeltBackground from '#lib/components/MeltBackground.svelte';
 	import WaveBackground from '#lib/components/WaveBackground.svelte';
 
 	let listening = $state(false);
+	let revealed = $state(false);
+
+	$effect(() => {
+		if (listening) revealed = true;
+	});
 </script>
 
 <svelte:head>
@@ -12,6 +18,12 @@
 
 <main class="relative flex min-h-dvh w-full flex-col bg-[#050706] text-zinc-100">
 	<WaveBackground />
+	<MeltBackground {revealed} />
+	<div
+		class={`pointer-events-none fixed inset-0 z-[1] transition-opacity duration-[1600ms] ease-out motion-reduce:transition-none ${revealed ? 'opacity-100' : 'opacity-0'}`}
+		style="background: radial-gradient(ellipse at 50% 45%, rgba(3, 6, 5, 0.55), rgba(3, 6, 5, 0.12) 62%, transparent 82%);"
+		aria-hidden="true"
+	></div>
 
 	<div
 		class="relative z-10 flex flex-1 flex-col items-center justify-start px-4 pt-40 pb-10 sm:justify-center sm:pt-44"

@@ -23,11 +23,9 @@ export async function askQuestion(question: string): Promise<ChatAnswer> {
 		throw new Error('当前身份无法使用问答，请先登录。');
 	}
 	if (!response.ok) throw new Error('问答服务暂时不可用，请稍后重试。');
-	try {
-		const data: ChatAnswer = await response.json();
-		if (typeof data.answer === 'string' && Array.isArray(data.citations)) return data;
-	} catch {
-		throw new Error('问答服务返回了无法读取的响应。');
+	const data = (await response.json().catch(() => null)) as Partial<ChatAnswer> | null;
+	if (typeof data?.answer === 'string' && Array.isArray(data.citations)) {
+		return { answer: data.answer, citations: data.citations };
 	}
 	throw new Error('问答服务返回了无法读取的响应。');
 }
