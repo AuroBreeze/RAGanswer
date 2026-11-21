@@ -1,4 +1,4 @@
-# RAGanswer 网页解析
+# RAGanswer 网页与 PDF 解析
 
 按 [网页与 PDF 解析和 RAG 入库对接协议](docs/网页与PDF解析-RAG入库对接协议.md) 1.0 生成网页 NDJSON。解析端接收来源登记方分配的 `source_id`、`document_id`、`parse_id` 和网页快照，输出 `parsed` 或带 `code`、`message`、`retryable` 的 `failed`。网页产物可交给 RAG 入库方。
 
@@ -37,3 +37,13 @@ go run ./cmd/webparse parse -store ./private-data < request.json
 服务端也可直接调用 `webparse.Capture` 和 `webparse.ParseSnapshot`。每份解析包的首行是文档头，后续行按阅读顺序保存标题、段落、列表、表格和题注。解析器使用原有锚点，缺失时输出 `anchor: null` 并标记 `quality: partial`。`partial` 由协议规定的来源侧复核后交给 RAG。
 
 成功产物写入 `parsed/<parse_id>/document.ndjson`。任务重投时复用已发布的产物和摘要。原件内容变更时登记新 `document_id`，调整解析配置时使用新 `parse_id`。分服务联调时，由调用方将 `document_id`、`parse_id`、`artifact_ref` 和 `artifact_sha256` 交给协议第 5 节的入库接口，并为入库服务配置同一受控存储。
+
+## PDF 解析
+
+```sh
+go run ./cmd/pdfparse -in ./private-data/manual.pdf -out ./private-data/manual.ndjson -parse-id parse_pdf_001 -source-id src_manual_pdf -document-id doc_manual_pdf_r1 -snapshot-ref snapshot/pdf/manual.pdf -ocr off
+```
+
+PDF 解析按协议输出 NDJSON 1.0，并在 `locator.page` 记录从 1 开始的物理页序。使用 `-out -` 可将产物写到标准输出。解析失败时，错误对象写到标准错误。
+
+`-ocr off` 仅处理 PDF 文本层。`-ocr auto` 在全篇无法抽取文本时尝试已配置的 OCR 服务，`-ocr force` 则直接调用 OCR。OCR 会向配置的服务上传原始 PDF，仅对获准发送给该服务的文档启用。使用 `OCR_ENDPOINT` 和 `OCR_API_KEY` 配置服务和凭据。源码也支持 `DEEPSEEK_API_KEY` 作为凭据来源。
