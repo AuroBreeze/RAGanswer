@@ -233,20 +233,25 @@
 </svelte:head>
 
 <main class="relative min-h-dvh w-full overflow-x-hidden bg-[#050706] text-zinc-100">
-	<WaveBackground ontap={handleScreenTap} visible={phase !== 'chat'} />
-	<MeltBackground revealed={phase === 'listening'} />
-	<div
-		class={`pointer-events-none fixed inset-0 z-[1] transition-opacity duration-[1600ms] ease-out motion-reduce:transition-none ${
-			phase === 'listening' ? 'opacity-100' : 'opacity-0'
-		}`}
-		style="background: radial-gradient(ellipse at 50% 45%, rgba(3, 6, 5, 0.55), rgba(3, 6, 5, 0.12) 62%, transparent 82%);"
-		aria-hidden="true"
-	></div>
 	<div
 		class={`pointer-events-none fixed inset-0 z-0 transition-all duration-1000 ease-out motion-reduce:transition-none ${
 			phase === 'chat' ? 'opacity-100' : 'opacity-0'
 		}`}
 		style={`background-color: ${chatColors[backgroundIndex]};`}
+		aria-hidden="true"
+	></div>
+	<div
+		class="pointer-events-none fixed inset-0 z-0 opacity-[0.14]"
+		aria-hidden="true"
+	>
+		<MeltBackground revealed={true} />
+	</div>
+	<WaveBackground ontap={handleScreenTap} visible={phase !== 'chat'} />
+	<div
+		class={`pointer-events-none fixed inset-0 z-[1] transition-opacity duration-[1600ms] ease-out motion-reduce:transition-none ${
+			phase === 'listening' ? 'opacity-100' : 'opacity-0'
+		}`}
+		style="background: radial-gradient(ellipse at 50% 45%, rgba(3, 6, 5, 0.55), rgba(3, 6, 5, 0.12) 62%, transparent 82%);"
 		aria-hidden="true"
 	></div>
 
