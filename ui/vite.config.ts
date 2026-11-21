@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
 		server: {
 			host: '127.0.0.1',
 			proxy: {
+				'/internal/v1/admin/': { target: env.RAG_API_URL || 'http://127.0.0.1:8080' },
 				'/api/v1/chat': {
 					target: env.RAG_API_URL || 'http://127.0.0.1:8080',
 					configure(proxy) {

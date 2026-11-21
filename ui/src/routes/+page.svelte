@@ -54,6 +54,13 @@
 </svelte:head>
 
 <main class="relative min-h-dvh w-full overflow-x-hidden bg-[#050706] text-zinc-100">
+	<a
+		href="/admin"
+		rel="external"
+		class="fixed top-4 right-4 z-30 rounded-lg border border-white/20 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-100 hover:border-emerald-300 focus-visible:outline-2"
+	>
+		管理后台
+	</a>
 	<div
 		class="pointer-events-none fixed inset-0 z-0 transition-all duration-1000 ease-out motion-reduce:transition-none"
 		class:opacity-100={inChat}
@@ -139,7 +146,7 @@
 
 			<aside
 				id="references"
-				class="min-h-0 w-full overflow-y-auto border-t border-white/10 bg-[#070b09]/80 px-5 pt-6 pb-10 backdrop-blur-xl lg:h-full lg:w-80 lg:border-t-0 lg:border-l"
+				class="min-h-0 w-full overflow-y-auto border-t border-white/10 bg-[#07110c]/45 px-5 pt-6 pb-10 shadow-[inset_1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-2xl backdrop-saturate-150 lg:h-full lg:w-80 lg:border-t-0 lg:border-l"
 				in:fly={{ x: 80, duration: 700, delay: 120 }}
 				aria-label="参考文献"
 			>

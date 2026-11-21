@@ -4,10 +4,11 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from .api import chat, ingestion
+from .api import admin, chat, ingestion
 from .errors import INVALID_REQUEST, ProtocolError
 
 app = FastAPI(title="RAG 入库与问答", version="1.0")
+app.include_router(admin.router)
 app.include_router(ingestion.router)
 app.include_router(chat.router)
 

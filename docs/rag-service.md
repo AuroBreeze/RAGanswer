@@ -31,6 +31,8 @@ copy .env.example .env   # 填写 OpenAI 兼容接口的地址与 Key
 - 同进程部署时可直接调用 `app.ingest.submit(IngestionRequest(...))`，无需走 HTTP。
 - 顺序要求：**先登记文档，再提交入库**（否则 404 `DOCUMENT_NOT_FOUND`）。
 
+本地管理页 `/admin` 使用服务令牌连接同一个知识库，显示真实登记与索引状态。可上传最大 10 MiB 的 NDJSON 解析包。上传后，服务端校验并保存产物，再登记文档并提交入库。部分解析结果须核对原文后点击「复核通过」。停用资料会将其从问答中排除。
+
 ## 实现要点
 
 - **校验**（`app/package.py`）：SHA-256、UTF-8、文档头/内容块字段、`sequence` 连续、`block_id` 唯一、`block_count`、定位类型与 `extraction_method` 匹配来源类型、PDF 页码不超过 `page_count`；并与登记记录核对 `source_id / source_type / source_sha256 / version`。不通过 → `ARTIFACT_INVALID`。
