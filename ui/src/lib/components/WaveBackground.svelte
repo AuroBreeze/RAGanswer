@@ -4,10 +4,10 @@
 	let { ontap, visible = true }: { ontap?: () => void; visible?: boolean } = $props();
 
 	const WID = 0.42;
-	const SPEED = 0.42;
+	const SPEED = 0.64;
 	const INS = 0.06;
-	// 单次脉冲：波长大于脉冲包络，避免一次触摸出现多圈波纹
-	const LAM = 1.1;
+	// 两次脉冲：波长约为脉冲包络的一半
+	const LAM = 0.55;
 
 	const vertexShader = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
 
